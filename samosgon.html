@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Симулятор самогонщика — деревня Тыковка</title>
+<style>
+  :root{ --bg:#1a1611; --panel:#26201a; --panel2:#2f2820; --line:#4a3d2e; --txt:#e8dcc8; --dim:#a8977d; --acc:#d9a441; --good:#7fb069; --bad:#d95f43; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--txt); font-family:Georgia, 'Times New Roman', serif; font-size:15px; padding:0 0 40px;}
+  .wrap{max-width:860px; margin:0 auto; padding:0 12px;}
+  header{background:var(--panel); border-bottom:2px solid var(--line); padding:10px 0; margin-bottom:14px;}
+  .toprow{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;}
+  .stats{display:flex; flex-wrap:wrap; gap:12px; font-size:14px;}
+  .stats b{color:var(--acc);}
+  .bar{height:8px; background:#3a2f24; border-radius:4px; overflow:hidden; min-width:60px;}
+  .bar i{display:block; height:100%;}
+  h1{font-size:22px; letter-spacing:.5px;}
+  h2{font-size:17px; margin:14px 0 8px; color:var(--acc);}
+  .btn{display:inline-block; background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit; font-size:14px; margin:2px;}
+  .btn:hover{border-color:var(--acc);}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .btn.acc{background:#4a3820; border-color:var(--acc); color:var(--acc);}
+  .btn.danger{border-color:var(--bad); color:var(--bad);}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px;}
+  .muted{color:var(--dim); font-size:13px;}
+  .lock{opacity:.55;}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+  .tab{padding:7px 14px; border-radius:6px 6px 0 0; border:1px solid var(--line); border-bottom:none; background:var(--panel); cursor:pointer; color:var(--dim);}
+  .tab.on{color:var(--acc); border-color:var(--acc); background:var(--panel2);}
+  .plot{display:inline-block; vertical-align:top; width:220px; margin:4px;}
+  .log{max-height:300px; overflow-y:auto; font-size:13px; line-height:1.5;}
+  .log div{padding:3px 0; border-bottom:1px dashed #3a3126;}
+  .log .ev{color:var(--acc);} .log .bad{color:var(--bad);} .log .good{color:var(--good);}
+  #intro{position:fixed; inset:0; background:rgba(10,8,5,.97); z-index:50; display:flex; align-items:center; justify-content:center;}
+  #intro .paper{max-width:620px; background:#efe5cf; color:#3a2c18; padding:34px 38px; border-radius:4px; box-shadow:0 0 60px #000; font-size:16px; line-height:1.65;}
+  #intro .paper h2{color:#7a5a1e; margin:0 0 14px;}
+  #intro .note{font-style:italic; margin:14px 0; padding-left:14px; border-left:3px solid #b09050;}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:40; display:none; align-items:center; justify-content:center;}
+  .modal .box{background:var(--panel); border:1px solid var(--acc); border-radius:10px; padding:20px; max-width:560px; width:92%;}
+  #devPanel{display:none; position:fixed; right:12px; top:60px; width:300px; background:var(--panel2); border:1px solid var(--acc); border-radius:8px; padding:12px; z-index:45; max-height:80vh; overflow-y:auto; font-size:13px;}
+  #devPanel label{display:flex; justify-content:space-between; align-items:center; margin:4px 0;}
+  #devPanel input{width:90px; background:#1a1611; color:var(--txt); border:1px solid var(--line); padding:3px 6px; border-radius:4px; font-family:inherit;}
+  #overlay{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:30; display:none;}
+  .distill{margin-top:10px;}
+  .heatbar{height:22px; background:linear-gradient(90deg,#203040 0%,#3a7a3a 40%,#3a7a3a 60%,#8a3030 80%,#a02020 100%); border-radius:5px; position:relative;}
+  .heatbar .mark{position:absolute; top:-4px; width:3px; height:30px; background:#fff; border-radius:2px;}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  td,th{padding:6px 8px; border-bottom:1px solid var(--line); text-align:left;}
+  .greenzone{background:#2d4a2d; color:#9fd98f; padding:2px 8px; border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- ======== ИНТРО ======== -->
+<div id="intro">
+  <div class="paper">
+    <h2>Письмо от нотариуса</h2>
+    <p>Дорогой земляк! Спешу сообщить: ваша бабушка, Вера Петровна, покинула этот мир тихо, во сне, как и хотела. Всё своё имущество она завещала вам.</p>
+    <p style="margin-top:12px">Что входит в наследство: обветшалый дом в деревне Тыковка (крыша держится на честном слове и трёх гвоздях), полуразрушенный сарай, в котором под слоем паутины — дедушкин самогонный аппарат «Молния-2», и три грядки у плетня.</p>
+    <div class="note">Из записки бабушки: «Граната в банке из-под индийского кофе — не граната. Там 500 рублей. Брага любит тишину, а совесть — чистоту. Не продешеви, дорогой».</div>
+    <p>Работы нет, долгов полным-полно, до города — час пешком. Зато руки прилагаются, а в деревне свой самогон всегда найдёт покупателя...</p>
+    <div style="text-align:center; margin-top:22px">
+      <button class="btn acc" id="acceptBtn" onclick="acceptInheritance()">Принять наследство</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== ИГРА ======== -->
+<div class="wrap" id="game" style="display:none">
+  <header>
+    <div class="toprow">
+      <h1>🥃 Деревня Тыковка</h1>
+      <div class="stats">
+        <span>💰 <b id="stMoney">0</b> ₽</span>
+        <span>📅 День <b id="stDay">1</b></span>
+        <span>⭐ Репутация <b id="stRep">0</b></span>
+        <span>🔥 Жара: <span class="bar" style="display:inline-block; width:60px"><i id="stHeatBar" style="background:var(--bad); width:0%"></i></span> <b id="stHeat">0</b>%</span>
+        <span>😴 Усталость: <span class="bar" style="display:inline-block; width:60px"><i id="stFatBar" style="background:var(--acc); width:0%"></i></span> <b id="stFat">0</b>%</span>
+      </div>
+      <div>
+        <button class="btn" onclick="togglePause()" id="pauseBtn">⏸ Пауза</button>
+        <button class="btn" onclick="openLog()">📖 Дневник</button>
+        <button class="btn" onclick="toggleDev()">🛠 Dev</button>
+        <button class="btn danger" onclick="restartAll()">Начать заново</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <div class="tab on" data-t="garden" onclick="switchTab('garden')">🌱 Огород</div>
+    <div class="tab" data-t="mash" onclick="switchTab('mash')">🫙 Брага</div>
+    <div class="tab" data-t="sell" onclick="switchTab('sell')">🛒 Продажа</div>
+    <div class="tab" data-t="shop" onclick="switchTab('shop')">🏪 Магазин</div>
+    <div class="tab" data-t="prog" onclick="switchTab('prog')">⭐ Прогресс</div>
+  </div>
+  <div id="tabBody"></div>
+</div>
+
+<!-- Модалки -->
+<div class="modal" id="logModal"><div class="box"><h2 style="margin-top:0">📖 Дневник</h2><div class="log" id="logBody"></div><div style="text-align:right; margin-top:12px"><button class="btn" onclick="closeModal('logModal')">Закрыть</button></div></div></div>
+<div class="modal" id="distillModal"><div class="box"><h2 style="margin-top:0">🔥 Перегонка</h2><div id="distillBody"></div></div></div>
+<div class="modal" id="winModal"><div class="box"><h2 style="margin-top:0; color:var(--good)">🎉 Лицензия получена!</h2><p>Тыковка теперь официально пахнет легально. Из подпольного винокура ты стал уважаемым предпринимателем. Деревня гордится тобой (кроме Зины, но она никогда никем не гордилась).</p><div style="text-align:right; margin-top:12px"><button class="btn acc" onclick="closeModal('winModal')">Продолжить игру</button></div></div></div>
+<div id="overlay"></div>
+
+<!-- Dev-панель -->
+<div id="devPanel">
+  <h2 style="margin-top:0">🛠 Панель разработчика</h2>
+  <div id="devFields"></div>
+  <div style="margin-top:10px">
+    <button class="btn acc" onclick="devApply()">Применить</button>
+    <button class="btn" onclick="devSkipDay()">+1 день</button>
+    <button class="btn danger" onclick="devReset()">Сброс игры</button>
+    <button class="btn" onclick="toggleDev()">Закрыть</button>
+  </div>
+</div>
+
+<script>
+/* ================= КОНСТАНТЫ ================= */
+const SAVE_KEY = 'samosgon_save_v3';
+const DAY_MS = 3000; // 1 игровой день = 3 секунды
+const UNLOCKS = { potato:10, extras:20, floor:30, bar:40, apparatus3:60 };
+const CHAN_CAP = { 1:20, 2:40, 3:60 };
+
+/* ================= СОСТОЯНИЕ ================= */
+function newState(){
+  return {
+    money:500, day:1, rep:0, heat:0, fatigue:0, debt:0,
+    sugar:0, potato:0, moonshine:0, mashQ:0,
+    yeast:1, fertilizer:0,
+    stage:1, plots:3, autopwater:false, floor:false, licensed:false,
+    garden:[], mash:[], log:[],
+    loan:null, // {amount, dueDay, name}
+    paused:false, tab:'garden', won:false
+  };
+}
+function initGarden(s){ s.garden = []; for(let i=0;i<s.plots;i++) s.garden.push(emptyPlot()); }
+function emptyPlot(){ return { crop:null, days:0, drought:0, watered:false, dead:false, fert:false }; }
+
+function isUnlocked(key){ if(key==='extras'||key==='autopwater') key='extras'; return S.rep >= UNLOCKS[key]; }
+function needRep(key){ if(key==='extras'||key==='autopwater') key='extras'; return UNLOCKS[key]; }
+
+/* ================= СОХРАНЕНИЕ ================= */
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || typeof s.money !== 'number') return null;
+    return s;
+  }catch(e){ return null; }
+}
+
+/* ================= ИНТРО (исправлено: глобальная функция + onclick) ================= */
+let accepted = false;
+function acceptInheritance(){
+  if(accepted) return;
+  accepted = true;
+  S = newState();
+  initGarden(S);
+  addLog('Ты подписал бумаги и вошёл в бабушкин дом. Пахнет пылью и корвалолом. В сарае — «Молния-2», у плетня — три грядки. Начинаем!', 'ev');
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  save();
+  switchTab('garden');
+  startLoop();
+}
+window.acceptInheritance = acceptInheritance;
+
+/* ================= ЗАПУСК ================= */
+let S = null;
+window.addEventListener('DOMContentLoaded', function(){
+  S = load();
+  if(S){
+    document.getElementById('intro').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+    switchTab(S.tab || 'garden');
+    startLoop();
+  }
+  // страховка: если кнопка есть — вешаем и второй обработчик (не помешает)
+  const b = document.getElementById('acceptBtn');
+  if(b) b.addEventListener('click', function(){ acceptInheritance(); });
+});
+
+let timer = null;
+function startLoop(){
+  if(timer) clearInterval(timer);
+  timer = setInterval(function(){
+    if(!S || S.paused || S.won) return;
+    nextDay();
+  }, DAY_MS);
+}
+function togglePause(){
+  if(!S) return;
+  S.paused = !S.paused;
+  document.getElementById('pauseBtn').textContent = S.paused ? '▶ Дальше' : '⏸ Пауза';
+  save();
+}
+
+/* ================= ДЕНЬ ================= */
+function nextDay(){
+  S.day++;
+  // еда и дрова
+  S.money -= 20;
+  if(S.money < -300){ gameOver(); return; }
+  S.debt = Math.max(0, -S.money);
+  // усталость
+  S.fatigue = Math.min(100, S.fatigue + 8);
+  if(S.fatigue >= 100) S.fatigue = 100;
+  // грядки
+  for(const p of S.garden){
+    if(!p.crop || p.dead) continue;
+    if(S.autopwater) p.watered = true;
+    if(p.watered){ p.drought = 0; } else { p.drought++; }
+    if(p.drought > (p.crop==='potato' ? 4 : 3)){
+      p.dead = true;
+      addLog('Козявки и засуха добили грядку — ' + (p.crop==='potato'?'картошка':'свёкла') + ' пропала 🐛', 'bad');
+      p.crop = null; p.days = 0; p.fert = false; p.drought = 0;
+    } else {
+      p.days++;
+    }
+    p.watered = false;
+  }
+  // брага
+  const slow = S.fatigue >= 80 ? 2 : 1; // при усталости брожение еле тянется
+  for(const m of S.mash){
+    if(m.done) continue;
+    m.tick = (m.tick || 0) + (slow);
+    if(m.tick >= m.need){
+      m.done = true;
+      addLog('Брага отыграла — ' + m.liters + ' л, качество ' + m.quality + '. Пора на огонь!', 'good');
+    }
+  }
+  // займ соседа
+  if(S.loan && S.day >= S.loan.dueDay){
+    addLog(S.loan.name + ' вернул долг: +' + (S.loan.amount + 150) + ' ₽, и уважение к тебе выросло', 'good');
+    S.money += S.loan.amount + 150;
+    S.rep += 5;
+    S.loan = null;
+  }
+  // случайное событие — примерно 1 раз в неделю
+  if(Math.random() < 1/7) randomEvent();
+  // облава
+  if(S.heat >= 100){
+    const fine = Math.min(Math.max(S.money,0), 500);
+    S.money -= fine;
+    addLog('🚨 ОБЛАВА! Участковый Печкин вынес всё самогон, а сверху ещё и штраф ' + fine + ' ₽. Жара спала, осадочек остался', 'bad');
+    S.moonshine = 0;
+    S.heat = 50;
+  }
+  renderAll();
+  save();
+}
+function gameOver(){
+  S.won = true; S.paused = true;
+  document.getElementById('overlay').style.display = 'block';
+  const bm = document.getElementById('distillModal');
+  bm.querySelector('.box').innerHTML = '<h2 style="margin-top:0; color:var(--bad)">💀 Долговая яма</h2><p>Долги превысили 300 ₽. Аппарат «Молния-2» увезли на завод, дом закладывать уже нечего. Тыковка шепчется за спиной.</p><div style="text-align:right"><button class="btn acc" onclick="restartAll()">Начать заново</button></div>';
+  bm.style.display = 'flex';
+}
+
+/* ================= СОБЫТИЯ (1 раз в неделю) ================= */
+function randomEvent(){
+  const r = Math.random();
+  if(r < 0.25){
+    S.sugar += 2;
+    addLog('Соседка Зина принесла банку солёных огурцов «за то, что выман от бродяг гарью». Внутри нашёл 2 кг сахара-песка', 'ev');
+  } else if(r < 0.5){
+    S.money += 150;
+    addLog('Дед Пётр занёс 150 ₽: «За то, что прошлый раз не разбавил. Честный человек на селе — на вес золота»', 'ev');
+  } else if(r < 0.7){
+    S.heat += 10;
+    addLog('Тётя Клава проболталась на почте, что у тебя «восьмидесяти градусов самогона». Жара +10', 'bad');
+  } else if(r < 0.9){
+    if(!S.loan){
+      S.loan = { amount:300, dueDay:S.day + 3 + Math.floor(Math.random()*3), name:'Вася-тракторист' };
+      addLog('Вася-тракторист просит 300 ₽ в долг «до пятницы». Отвечать можно на вкладке «Продажа»', 'ev');
+      S.pendingLoan = true;
+    } else {
+      S.rep += 3;
+      addLog('Кума Нюра разнесла по деревне, что твой самогон «как слеза». Репутация +3', 'good');
+    }
+  } else {
+    S.money += 100;
+    addLog('Гонял голубей мимо твоего плетня — нашёл 100 ₽ в кармане куртки, которую оставил на крыльце. Чудеса', 'ev');
+  }
+}
+
+/* ================= ДЕЙСТВИЯ ================= */
+function act(a, x, y){
+  if(!S || S.won) return;
+  switch(a){
+    case 'plant': {
+      if(!isUnlocked(x==='potato'?'potato':'beet') && x==='potato'){ alert('Картофель откроется при репутации ' + UNLOCKS.potato); return; }
+      const p = S.garden[x];
+      if(!p || p.crop) return;
+      const cost = x==='beet' ? 10 : 15;
+      if(S.money < cost){ alert('Не хватает на семена (' + cost + ' ₽)'); return; }
+      S.money -= cost;
+      p.crop = x; p.days = 0; p.drought = 0; p.dead = false; p.fert = false;
+      addLog('Посадил ' + (x==='beet'?'сахарную свёклу':'картофель') + ' на грядке №' + (x+1) + '... ой, то есть №' + (x+1));
+      break;
+    }
+    case 'fert': {
+      const p = S.garden[x];
+      if(!p || p.crop || p.fert) return;
+      if(S.fertilizer < 1){ alert('Нет удобрений — купи в магазине'); return; }
+      S.fertilizer--; p.fert = true;
+      addLog('Удобрил грядку №' + (x+1) + ' — урожай будет жирнее');
+      break;
+    }
+    case 'water': {
+      const p = S.garden[x];
+      if(!p || !p.crop || p.watered) return;
+      p.watered = true;
+      break;
+    }
+    case 'harvest': {
+      const p = S.garden[x];
+      if(!p || !p.crop || p.dead) return;
+      const need = p.crop==='beet' ? 5 : 7;
+      if(p.days < need) return;
+      const cap = S.floor ? 200 : 100;
+      if(p.crop==='beet'){
+        let kg = 8 + Math.floor(Math.random()*5) + (p.fert?5:0);
+        if(S.sugar + kg > cap){ kg = Math.max(0, cap - S.sugar); }
+        S.sugar += kg;
+        addLog('Собрал свёклу: +' + kg + ' кг сахара на склад');
+      } else {
+        let kg = 14 + Math.floor(Math.random()*7) + (p.fert?8:0);
+        if(S.potato + kg > cap){ kg = Math.max(0, cap - S.potato); }
+        S.potato += kg;
+        addLog('Собрал картошку: +' + kg + ' кг. Ведро за ведром');
+      }
+      S.garden[x] = emptyPlot();
+      break;
+    }
+    case 'buyPlot': {
+      if(!isUnlocked('extras')){ alert('Откроется при репутации ' + UNLOCKS.extras); return; }
+      if(S.plots >= 9){ alert('Больше девяти грядок не разбить — участок кончился'); return; }
+      if(S.money < 500){ alert('Грядка стоит 500 ₽'); return; }
+      S.money -= 500; S.plots++;
+      S.garden.push(emptyPlot());
+      addLog('Вскопал новую грядку. Спина ноет, зато масштаб растёт', 'good');
+      break;
+    }
+    case 'mash': {
+      const type = x; // 'sugar' | 'potato'
+      const cap = S.floor ? 50 : 25;
+      if(S.mash.length >= 4){ alert('Уже затворено 4 партии — больше некуда ставить'); return; }
+      const totalMashL = S.mash.reduce((s,m)=>s+m.liters,0);
+      let want = y; // литры желаемой браги
+      if(totalMashL + want > cap) want = Math.max(0, cap - totalMashL);
+      if(want < 5){ alert('Мало места под брагу (лимит ' + cap + ' л)'); return; }
+      if(type==='sugar'){
+        const kg = Math.min(S.sugar, want);
+        if(kg < 5){ alert('Мало сахара (нужно хотя бы 5 кг)'); return; }
+        S.sugar -= kg;
+        addMash('sugar', kg, 15);
+      } else {
+        const kg = Math.min(S.potato, want*2);
+        if(kg < 10){ alert('Мало картофеля (нужно хотя бы 10 кг)'); return; }
+        S.potato -= kg;
+        addMash('potato', Math.floor(kg/2), -5);
+      }
+      break;
+    }
+    case 'distill': {
+      const m = S.mash[x];
+      if(!m || !m.done) return;
+      openDistill(x);
+      break;
+    }
+    case 'sell': {
+      sell(x, y);
+      break;
+    }
+    case 'sellSugar': {
+      const kg = Math.min(S.sugar, y);
+      if(kg <= 0) return;
+      S.sugar -= kg;
+      S.money += kg * 35;
+      addLog('Продал ' + kg + ' кг сахара на рынке по 35 ₽/кг — легально и скучно');
+      break;
+    }
+    case 'sleep': {
+      if(S.money < 10){ alert('Даже на сон нужно 10 ₽ (подушка — в залоге)'); return; }
+      S.money -= 10;
+      S.fatigue = 0;
+      addLog('Выспался на бабушкиной перине. Мир снова в порядке', 'good');
+      break;
+    }
+    case 'loanYes': {
+      if(S.pendingLoan && S.money >= 300){
+        S.money -= 300; S.pendingLoan = false;
+        addLog('Дал Васе-трактористу 300 ₽ в долг. Сельское братство ценится');
+      }
+      break;
+    }
+    case 'loanNo': {
+      if(S.pendingLoan){
+        S.pendingLoan = false; S.rep -= 5; S.heat += 5;
+        S.loan = null;
+        addLog('Отказал Васе. Он обиделся и, кажется, болтает лишнее...', 'bad');
+      }
+      break;
+    }
+  }
+  renderAll(); save();
+}
+function addMash(type, liters, qBase){
+  const hasYeast = S.yeast > 0;
+  if(hasYeast) S.yeast--;
+  S.mash.push({ type:type, liters:liters, quality:Math.max(10, 50 + qBase + (hasYeast?10:0)), need:(hasYeast?2:3), tick:0, done:false });
+  addLog('Затворил брагу: ' + liters + ' л ' + (type==='sugar'?'сахарной':'картофельной') + (hasYeast?' (дрожжи пошли в дело)':''));
+}
+
+/* ================= МИНИ-ИГРА ПЕРЕГОНКИ ================= */
+let dist = null;
+function openDistill(idx){
+  dist = { idx:idx, t:50, dir:1, hold:0, done:false };
+  renderDistill();
+  document.getElementById('distillModal').style.display = 'flex';
+  dist._loop = setInterval(function(){
+    if(!dist || dist.done) return;
+    dist.t += dist.dir * (2 + Math.random()*2);
+    if(dist.t > 100) { dist.t = 100; dist.dir = -1; }
+    if(dist.t < 0) { dist.t = 0; dist.dir = 1; }
+    renderDistill();
+  }, 60);
+}
+function renderDistill(){
+  const m = S.mash[dist.idx];
+  const inZone = dist.t >= 40 && dist.t <= 60;
+  dist.hold = inZone ? dist.hold + 1 : 0;
+  if(dist.hold >= 50){ finishDistill(true); return; }
+  document.getElementById('distillBody').innerHTML =
+    '<p class="muted">Держи стрелку в зелёной зоне 3 секунды, чтобы отсечь головы аккуратно. Ушёл в край — получишь «сивуху».</p>' +
+    '<div class="heatbar"><div class="mark" style="left:' + dist.t + '%"></div></div>' +
+    '<p style="margin-top:8px">Температура: <b>' + dist.t.toFixed(0) + ' °C</b> ' + (inZone ? '<span class="greenzone">в норме</span>' : '') + '</p>' +
+    '<div style="margin-top:10px"><button class="btn acc" onclick="finishDistill(false)">Слить как есть</button>' +
+    '<button class="btn danger" onclick="abortDistill()">Отмена</button></div>';
+}
+function abortDistill(){ if(dist && dist._loop) clearInterval(dist._loop); dist = null; closeModal('distillModal'); }
+function finishDistill(success){
+  if(!dist || dist.done) return;
+  dist.done = true;
+  if(dist._loop) clearInterval(dist._loop);
+  const m = S.mash[dist.idx];
+  let q = m.quality + (S.stage-1)*10;
+  let mult = 0.55 + 0.05*S.stage;
+  if(S.fatigue >= 80) q -= 10;
+  if(success){ q += 15; }
+  else if(dist.t < 20 || dist.t > 80){ q -= 20; mult *= 0.7; addLog('Перегар! Партия «сивуха» — качество −20, выхода меньше', 'bad'); }
+  const out = Math.max(1, Math.round(m.liters * mult));
+  const cap = S.floor ? 100 : 50;
+  if(S.moonshine + out > cap){
+    addLog('Самогонный склад переполнен — слил только часть', 'bad');
+  }
+  S.moonshine = Math.min(cap, S.moonshine + out);
+  S.moonQ = Math.round(q);
+  addLog('Перегнал: +' + out + ' л самогона, качество ' + S.moonQ, 'good');
+  S.mash.splice(dist.idx, 1);
+  dist = null;
+  closeModal('distillModal');
+  renderAll(); save();
+}
+
+/* ================= ПРОДАЖИ ================= */
+function sell(chan, liters){
+  if(S.moonshine <= 0) return;
+  liters = Math.min(liters, S.moonshine);
+  if(liters <= 0) return;
+  const q = S.moonQ || 50;
+  let price, heatAdd;
+  if(chan==='kor'){
+    price = Math.round(150 + q*1.2);
+    heatAdd = 0;
+  } else if(chan==='market'){
+    price = Math.round(200 + q*1.5);
+    heatAdd = 5;
+  } else if(chan==='bar'){
+    if(!isUnlocked('bar')){ alert('Бар откроется при репутации ' + UNLOCKS.bar); return; }
+    price = Math.round(280 + q*2);
+    heatAdd = 2;
+  }
+  S.moonshine -= liters;
+  const sum = price * liters;
+  S.money += sum;
+  S.rep += Math.round(liters * (q > 60 ? 1.5 : 1));
+  S.heat += heatAdd * liters;
+  addLog('Продал ' + liters + ' л по ' + price + ' ₽/л (' + chanName(chan) + '): +' + sum + ' ₽, жара +' + (heatAdd*liters), 'good');
+  if(S.money < -300) gameOver();
+}
+function chanName(c){ return c==='kor'?'кореш':(c==='market'?'рынок':'бар «Кабачок»'); }
+
+/* ================= МАГАЗИН ================= */
+const SHOP = [
+  { key:'yeast', name:'Дрожжи (пакет)', price:30, desc:'Брага бродит за 2 дня вместо 3, +10 к качеству' },
+  { key:'fert', name:'Удобрение', price:50, desc:'Урожай грядки +5 кг (свёкла) / +8 кг (картофель)' },
+  { key:'stage2', name:'Аппарат «Молния-2» II ступень', price:3000, desc:'Выход +5%, качество +10' },
+  { key:'stage3', name:'Аппарат III ступень', price:8000, desc:'Выход +10%, качество +20 (реп 60)', lock:'apparatus3' },
+  { key:'autopwater', name:'Автополив (капельница)', price:1500, desc:'Грядки поливаются сами (реп 20)', lock:'extras' },
+  { key:'plot', name:'Новая грядка', price:500, desc:'До 9 грядок всего (реп 20)', lock:'extras' },
+  { key:'floor', name:'Второй этаж дома', price:8000, desc:'Склад: 200 кг сырья, 50 л браги (реп 30)', lock:'floor' },
+  { key:'license', name:'Лицензия на винокурню', price:100000, desc:'Финал игры: легальный бизнес!' }
+];
+function buy(key){
+  if(!S || S.won) return;
+  const item = SHOP.find(i=>i.key===key);
+  if(!item) return;
+  if(item.lock && !isUnlocked(item.lock)){ alert('Откроется при репутации ' + needRep(item.lock)); return; }
+  if(S.money < item.price){ alert('Не хватает ' + (item.price - S.money) + ' ₽'); return; }
+  if(key==='plot'){
+    if(S.plots >= 9){ alert('Максимум 9 грядок'); return; }
+    S.money -= 500; S.plots++; S.garden.push(emptyPlot());
+    addLog('Купил новую грядку за 500 ₽', 'good');
+  } else if(key==='yeast'){
+    S.money -= 30; S.yeast++;
+    addLog('Купил пакет дрожжей');
+  } else if(key==='fert'){
+    S.money -= 50; S.fertilizer++;
+    addLog('Купил удобрение');
+  } else if(key==='stage2' || key==='stage3'){
+    if(key==='stage3' && S.stage < 2){ alert('Сначала нужна II ступень'); return; }
+    S.money -= item.price; S.stage = key==='stage2' ? 2 : 3;
+    addLog('Аппарат прокачан до ' + S.stage + ' ступени — гнать станет вкуснее', 'good');
+  } else if(key==='autopwater'){
+    S.money -= 1500; S.autopwater = true;
+    addLog('Собрал капельный автополив из старого бачка. Руки свободны!', 'good');
+  } else if(key==='floor'){
+    S.money -= 8000; S.floor = true;
+    addLog('Отстроил второй этаж — теперь большой склад', 'good');
+  } else if(key==='license'){
+    S.money -= 100000; S.licensed = true; S.won = true;
+    save();
+    document.getElementById('winModal').style.display = 'flex';
+    return;
+  }
+  renderAll(); save();
+}
+
+/* ================= РЕНДЕР ================= */
+function switchTab(t){
+  S.tab = t;
+  document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on', e.dataset.t===t));
+  renderTab(t);
+}
+function renderAll(){ renderTop(); renderTab(S.tab); }
+function renderTop(){
+  document.getElementById('stMoney').textContent = Math.round(S.money);
+  document.getElementById('stDay').textContent = S.day;
+  document.getElementById('stRep').textContent = S.rep;
+  document.getElementById('stHeat').textContent = S.heat;
+  document.getElementById('stHeatBar').style.width = Math.min(100, S.heat) + '%';
+  document.getElementById('stFat').textContent = S.fatigue;
+  document.getElementById('stFatBar').style.width = S.fatigue + '%';
+}
+function renderTab(t){
+  const el = document.getElementById('tabBody');
+  if(t==='garden') el.innerHTML = gardenHTML();
+  else if(t==='mash') el.innerHTML = mashHTML();
+  else if(t==='sell') el.innerHTML = sellHTML();
+  else if(t==='shop') el.innerHTML = shopHTML();
+  else if(t==='prog') el.innerHTML = progHTML();
+}
+function gardenHTML(){
+  let h = '<div class="card"><h2 style="margin-top:0">🌱 Огород</h2>';
+  if(S.autopwater) h += '<p class="muted">💧 Автополив включён — грядки не сохнут.</p>';
+  for(let i=0;i<S.garden.length;i++){
+    const p = S.garden[i];
+    h += '<div class="plot card">';
+    if(!p.crop){
+      h += '<b>Грядка №' + (i+1) + '</b><br><span class="muted">Пусто</span><br>';
+      h += '<button class="btn" onclick="act(\'plant\', ' + i + ', \'beet\')">Свёкла (10 ₽)</button> ';
+      h += S.rep >= UNLOCKS.potato
+        ? '<button class="btn" onclick="act(\'plant\', ' + i + ', \'potato\')">Картошка (15 ₽)</button>'
+        : '<button class="btn lock" onclick="alert(\'Картофель откроется при репутации ' + UNLOCKS.potato + '\')">🥔 🔒 ' + UNLOCKS.potato + '</button>';
+      if(!p.fert) h += '<br><button class="btn" onclick="act(\'fert\', ' + i + ')">Удобрить (' + S.fertilizer + ' шт.)</button>';
+      else h += '<br><span class="muted">🧪 Удобрено</span>';
+    } else if(p.dead){
+      h += '<b>Грядка №' + (i+1) + '</b><br><span class="muted" style="color:var(--bad)">Погибла 😿</span><br><button class="btn" onclick="act(\'plant\', ' + i + ', \'beet\')">Перепахать</button>';
+    } else {
+      const need = p.crop==='beet' ? 5 : 7;
+      const name = p.crop==='beet' ? 'Свёкла' : 'Картошка';
+      const ready = p.days >= need;
+      h += '<b>Грядка №' + (i+1) + '</b><br>' + name + ' — день ' + p.days + '/' + need +
+        (p.fert ? ' 🧪' : '') + '<br>';
+      if(ready){
+        h += '<button class="btn acc" onclick="act(\'harvest\', ' + i + ')">🌾 Собрать!</button>';
+      } else {
+        h += '<button class="btn" onclick="act(\'water\', ' + i + ')" ' + (p.watered?'disabled':'') + '>💧 Полить</button>';
+        if(p.drought >= 2) h += '<br><span class="muted" style="color:var(--bad)">Пересыхает!</span>';
+      }
+    }
+    h += '</div>';
+  }
+  h += '<div style="clear:both"><button class="btn" onclick="act(\'buyPlot\')">🪓 Вскопать грядку (500 ₽' + (isUnlocked('extras')?'':' 🔒 реп ' + UNLOCKS.extras) + ')</button>';
+  h += '<button class="btn" onclick="act(\'sleep\')">😴 Спать (10 ₽)</button></div>';
+  h += '<p class="muted">Свёкла зреет 5 дней, картошка — 7. Без полива свёкла умирает за 3 дня, картошка — за 4.</p></div>';
+  return h;
+}
+function mashHTML(){
+  let h = '<div class="card"><h2 style="margin-top:0">🫙 Брага</h2>';
+  const cap = S.floor ? 50 : 25;
+  const used = S.mash.reduce((s,m)=>s+m.liters,0);
+  h += '<p class="muted">В бочках: ' + used + '/' + cap + ' л. Сахар: ' + S.sugar + ' кг, картофель: ' + S.potato + ' кг, дрожжи: ' + S.yeast + ' шт.</p>';
+  h += '<button class="btn" onclick="act(\'mash\', \'sugar\', 20)">Затворить сахарную 20 л (20 кг сахара)</button> ';
+  h += '<button class="btn" onclick="act(\'mash\', \'potato\', 20)">Затворить картофельную 20 л (40 кг картошки)</button>';
+  h += '<hr style="border-color:var(--line); margin:10px 0">';
+  if(S.mash.length === 0) h += '<p class="muted">Пока пусто. Затвори брагу — и жди.</p>';
+  for(let i=0;i<S.mash.length;i++){
+    const m = S.mash[i];
+    h += '<div class="card"><b>' + (m.type==='sugar'?'Сахарная':'Картофельная') + ' брага, ' + m.liters + ' л</b><br>';
+    if(m.done){
+      h += '<span style="color:var(--good)">Готова!</span> Качество: ' + m.quality + '<br>';
+      h += '<button class="btn acc" onclick="act(\'distill\', ' + i + ')">🔥 Гнать!</button>';
+    } else {
+      h += 'Бродит: ' + m.tick + '/' + m.need + ' дн.';
+      if(S.fatigue >= 80) h += ' <span class="muted" style="color:var(--bad)">(еле тянется — ты устал)</span>';
+    }
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+function sellHTML(){
+  let h = '<div class="card"><h2 style="margin-top:0">🛒 Продажа</h2>';
+  h += '<p class="muted">Самогон: <b>' + S.moonshine + ' л</b> (качество ' + (S.moonQ||'—') + '), сахар: <b>' + S.sugar + ' кг</b></p>';
+  if(S.moonshine <= 0) h += '<p class="muted">Продавать нечего. Сначала перегони брагу.</p>';
+  h += '<table><tr><th>Канал</th><th>Цена/л</th><th>Жара</th><th></th></tr>';
+  const q = S.moonQ || 50;
+  const rows = [
+    ['kor','🤝 Кореш', Math.round(150 + q*1.2), 0],
+    ['market','🏪 Рынок', Math.round(200 + q*1.5), 5]
+  ];
+  if(isUnlocked('bar')) rows.push(['bar','🍺 Бар «Кабачок»', Math.round(280 + q*2), 2]);
+  else rows.push(['bar','🍺 Бар «Кабачок» 🔒 реп ' + UNLOCKS.bar, '—', '—']);
+  for(const r of rows){
+    const dis = (S.moonshine<=0 || r[0]==='bar' && !isUnlocked('bar')) ? 'disabled' : '';
+    h += '<tr><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + (r[3]==='—'?'—':'+' + r[3] + '/л') + '</td>' +
+      '<td><button class="btn" ' + dis + ' onclick="sell(\'' + r[0] + '\', 5)">5 л</button> ' +
+      '<button class="btn acc" ' + dis + ' onclick="sell(\'' + r[0] + '\', ' + S.moonshine + ')">Всё</button></td></tr>';
+  }
+  h += '</table>';
+  if(S.sugar > 0) h += '<p style="margin-top:8px"><button class="btn" onclick="act(\'sellSugar\', 0, S.sugar)">Продать сахар (' + S.sugar + ' кг × 35 ₽)</button></p>';
+  if(S.pendingLoan){
+    h += '<hr style="border-color:var(--line)"><p><b>Вася-тракторист ждёт ответа:</b> просит 300 ₽ в долг до дня ' + (S.loan?S.loan.dueDay:'—') + '.</p>' +
+      '<button class="btn acc" onclick="act(\'loanYes\')">Дать в долг</button> <button class="btn danger" onclick="act(\'loanNo\')">Отказать</button>';
+  }
+  h += '<p class="muted" style="margin-top:8px">При жаре 100% в конце дня — облава: штраф и весь самогон под снос.</p></div>';
+  return h;
+}
+function shopHTML(){
+  let h = '<div class="card"><h2 style="margin-top:0">🏪 Магазин «У Клавы»</h2><p class="muted">Деньги: ' + Math.round(S.money) + ' ₽</p><table><tr><th>Товар</th><th>Цена</th><th>Что даёт</th><th></th></tr>';
+  for(const it of SHOP){
+    const locked = it.lock && !isUnlocked(it.lock);
+    const dis = locked || S.money < it.price ? 'disabled' : '';
+    const nm = locked ? '🔒 реп ' + needRep(it.lock) : it.name;
+    h += '<tr><td>' + nm + '</td><td>' + it.price + ' ₽</td><td class="muted">' + it.desc + '</td><td><button class="btn" ' + dis + ' onclick="buy(\'' + it.key + '\')">Купить</button></td></tr>';
+  }
+  h += '</table></div>';
+  return h;
+}
+function progHTML(){
+  const items = [
+    ['Старт', 0, 'Свёкла, брага, перегонка, кореш и рынок'],
+    ['Картофель и займы', UNLOCKS.potato, 'Картошка на грядках, Вася-тракторист'],
+    ['Автополив и грядки', UNLOCKS.extras, 'Капельница, до 9 грядок'],
+    ['Второй этаж', UNLOCKS.floor, 'Большой склад: 200 кг, 50 л браги'],
+    ['Бар «Кабачок»', UNLOCKS.bar, 'Самые жирные цены за литр'],
+    ['Аппарат III ступени', UNLOCKS.apparatus3, 'Выход +10%, качество +20']
+  ];
+  let h = '<div class="card"><h2 style="margin-top:0">⭐ Лестница репутации</h2><table><tr><th>Уровень</th><th>Репутация</th><th>Что открывается</th><th>Статус</th></tr>';
+  for(const it of items){
+    const done = S.rep >= it[1];
+    h += '<tr><td><b>' + it[0] + '</b></td><td>' + it[1] + '</td><td class="muted">' + it[2] + '</td><td>' + (done ? '✅' : '🔒') + '</td></tr>';
+  }
+  h += '</table><p class="muted">Репутация растёт за продажи и качественные партии. Цель: лицензия за 100 000 ₽.</p></div>';
+  return h;
+}
+
+/* ================= ЛОГ / МОДАЛКИ ================= */
+function addLog(text, cls){
+  S.log.unshift({ d:S.day, t:text, c:cls||'' });
+  if(S.log.length > 200) S.log.pop();
+}
+function openLog(){
+  document.getElementById('logBody').innerHTML = S.log.map(e=>'<div class="' + e.c + '"><b>День ' + e.d + '</b>. ' + e.t + '</div>').join('');
+  document.getElementById('logModal').style.display = 'flex';
+}
+function closeModal(id){ document.getElementById(id).style.display = 'none'; }
+
+/* ================= DEV-ПАНЕЛЬ ================= */
+function toggleDev(){
+  const p = document.getElementById('devPanel');
+  if(p.style.display === 'block'){ p.style.display = 'none'; return; }
+  devFields();
+  p.style.display = 'block';
+}
+function devFields(){
+  const f = [
+    ['money','Деньги'], ['rep','Репутация'], ['fatigue','Усталость %'], ['heat','Жара %'],
+    ['debt','Долг'], ['day','День'], ['sugar','Сахар кг'], ['potato','Картофель кг'],
+    ['moonshine','Самогон л'], ['moonQ','Качество'], ['yeast','Дрожжи'], ['fertilizer','Удобрения'],
+    ['stage','Аппарат (1-3)'], ['plots','Грядки']
+  ];
+  let h = '';
+  for(const x of f){
+    h += '<label>' + x[1] + ' <input type="number" id="dev_' + x[0] + '" value="' + (S[x[0]]||0) + '"></label>';
+  }
+  h += '<label>Автополив <input type="checkbox" id="dev_apw" ' + (S.autopwater?'checked':'') + '></label>';
+  h += '<label>Второй этаж <input type="checkbox" id="dev_floor" ' + (S.floor?'checked':'') + '></label>';
+  document.getElementById('devFields').innerHTML = h;
+}
+function devApply(){
+  for(const k of ['money','rep','fatigue','heat','debt','day','sugar','potato','moonshine','moonQ','yeast','fertilizer','stage','plots']){
+    const el = document.getElementById('dev_' + k);
+    if(el && el.value !== '') S[k] = parseFloat(el.value);
+  }
+  S.autopwater = document.getElementById('dev_apw').checked;
+  S.floor = document.getElementById('dev_floor').checked;
+  while(S.garden.length < S.plots) S.garden.push(emptyPlot());
+  while(S.garden.length > S.plots) S.garden.pop();
+  renderAll(); save();
+}
+function devSkipDay(){ if(S && !S.won){ nextDay(); } }
+function devReset(){
+  S = newState(); initGarden(S);
+  save();
+  addLog('Время свернулось обратно. Снова 500 ₽ в банке из-под кофе и три грядки у плетня.', 'ev');
+  renderAll(); save();
+}
+function restartAll(){
+  if(!confirm('Точно начать заново? Весь прогресс сотрётся безвозвратно.')) return;
+  const backup = S ? JSON.stringify(S) : null;
+  try{ localStorage.setItem(SAVE_KEY + '_bak', backup); }catch(e){}
+  S = newState(); initGarden(S);
+  save();
+  document.getElementById('pauseBtn').textContent = '⏸ Пауза';
+  document.getElementById('distillModal').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+  switchTab('garden');
+}
+</script>
+</body>
+</html>
