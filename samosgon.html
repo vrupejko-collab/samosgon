@@ -2,11 +2,11 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Самосгон</title>
+<title>Самосгон 2.0 — Наследство</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
  body{font-family:system-ui;background:#1b1f24;color:#e8e6e1;margin:0;padding:12px}
- h1{font-size:20px;margin:4px 0}
+ h1{font-size:20px;margin:4px 0}h3{margin:6px 0}
  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
  .stat{background:#262c33;border-radius:8px;padding:4px 10px}
  .mini{display:inline-block;width:60px;height:6px;border-radius:3px;background:#111;vertical-align:middle;margin-left:6px}
@@ -20,23 +20,30 @@
  .pbar i{display:block;height:10px;border-radius:5px}
  .gb{background:linear-gradient(90deg,#5da95d,#c9b458)}
  .gw{background:linear-gradient(90deg,#7e57c2,#5c6bc0)}
+ .gr{background:linear-gradient(90deg,#b25b2a,#d97b2a)}
  .bad{color:#e57373}.ok{color:#81c784}.warn{color:#ffd54f}
  .badge{display:inline-block;padding:2px 10px;border-radius:10px;font-weight:bold}
  .needle{position:absolute;top:0;width:4px;height:30px;background:#fff;box-shadow:0 0 8px #fff}
  .muted{color:#8a9199}
  .wtext{font-size:14px;line-height:1.5;margin-top:6px}
+ .story{font-family:Georgia,serif;font-size:15px;line-height:1.55}
+ .done{color:#81c784}.todo{color:#e8e6e1}
  #log{font-size:12px;max-height:150px;overflow:auto;background:#111;color:#9c9;padding:8px;border-radius:8px}
  table{border-collapse:collapse}td{padding:4px 10px;border-bottom:1px solid #333}
  input{background:#111;color:#eee;border:1px solid #444;border-radius:6px;padding:3px 6px}
 </style>
 </head>
 <body>
-<h1>🥃 Самосгон</h1>
+<h1>🥃 Самосгон 2.0 — Наследство</h1>
 <div class="bar">
+ <span class="stat" id="s-season"></span>
+ <span class="stat" id="s-weather"></span>
  <span class="stat">💰 <b id="s-money"></b></span>
  <span class="stat">⭐ <b id="s-rep"></b></span>
- <span class="stat">📅 День <b id="s-day"></b></span>
+ <span class="stat">📅 <b id="s-day"></b></span>
+ <span class="stat">🍖 <b id="s-hunger"></b><span class="mini"><i id="m-hunger"></i></span></span>
  <span class="stat">😴 <b id="s-fat"></b><span class="mini"><i id="m-fat"></i></span></span>
+ <span class="stat">🌡 <b id="s-warm"></b></span>
  <span class="stat">🔥 <b id="s-heat"></b><span class="mini"><i id="m-heat"></i></span></span>
 </div>
 <div class="bar">
@@ -51,31 +58,57 @@
 <script src="data/recipes.js"></script>
 <script src="data/upgrades.js"></script>
 <script src="data/skills.js"></script>
+<script src="data/buildings.js"></script>
+<script src="data/world.js"></script>
 <script>
 "use strict";
-const DEF={money:500,rep:0,fat:0,heat:0,day:1,sugar:0,beet:0,potato:0,mash:0,mashQ:50,spirit:0,quality:50,
- bottles:6,yeast:0,fert:0,plots:[],auto:false,floor2:false,app:1,mark:false,license:false,
+const DEF={money:350,food:2,hunger:20,fat:0,heat:0,day:1,
+ houseLvl:0,barnLvl:0,houseTemp:10,boards:0,nails:0,firewood:2,
+ sugar:20,beet:0,potato:0,mash:0,mashQ:50,spirit:0,quality:50,
+ bottles:6,yeast:0,fert:0,kit:0,
+ plots:[],auto:false,floor2:false,app:1,mark:false,license:false,pech:false,appFixed:false,
  tools:{},loans:[],brewing:null,paused:false,lastMashRec:"sugar",
- recipesKnown:["sugar"],distilled:{},brewCount:0,distCount:0,harvestCount:0,
+ recipesKnown:["sugar"],distilled:{},brewCount:0,distCount:0,harvestCount:0,soldMash:0,
  wiki:[],skillPts:0,skills:[],milestones:[],
+ prologue:false,introStep:0,chapter:1,weatherIdx:0,weatherLeft:2,
  timers:{daySec:3,ferment:3,event:14,loan:4,growBeet:5,growPotato:7,dieBeet:3,diePotato:4}};
-const KEY="samosgon_v3";
-const TABS=["Огород","Чан","Перегонка","Продажа","Магазин","Развитие","Wiki","Прогресс","Dev"];
-const SHOPS=[
- {name:"Кореш",icon:"🤝",base:500,rep:0,heat:0},
- {name:"Рынок",icon:"🏪",base:700,rep:0,heat:8},
- {name:"Бар «Кабачок»",icon:"🍻",base:950,rep:40,heat:3}];
-const UNLOCK=[[0,"Свёкла, брага, перегонка, кореш и рынок"],[10,"Картофель, займы соседей"],
- [20,"Автополив, доп. грядки, аппарат II"],[30,"Второй этаж — большой склад"],
- [40,"Бар «Кабачок»"],[60,"Аппарат III, знак качества"]];
+const KEY="samosgon_v5";
+const TABS=["Огород","Чан","Перегонка","Продажа","Дом","Магазин","Развитие","Тетрадь","Прогресс","Dev"];
+const UNLOCK=[[0,"Свёкла, брага, соседи"],[10,"Картофель, займы соседей"],
+ [20,"Автополив, аппарат II"],[30,"Второй этаж — большой склад"],
+ [25,"Трактирщик «Кабачок»"],[60,"Аппарат III, знак качества"]];
 const MILES=[10,20,30,40,60];
-const DEV=[["money","Деньги"],["rep","Репутация"],["fat","Усталость"],["heat","Жара"],["day","День"],
+const CHAPTERS=[
+ {name:"Глава 1. Наследство",tasks:[["Осмотреть сарай",s=>s.prologue],
+  ["Собрать первый урожай",s=>s.harvestCount>0],
+  ["Поставить первую брагу",s=>s.brewCount>0],
+  ["Продать брагу Михалычу",s=>s.soldMash>0]]},
+ {name:"Глава 2. Первые деньги",tasks:[["Починить аппарат (ремкомплект)",s=>s.appFixed],
+  ["Расчистить сарай (уровень 1)",s=>s.barnLvl>=1],
+  ["Провести первую перегонку",s=>s.distCount>0],
+  ["Утеплить дом (уровень 1)",s=>s.houseLvl>=1]]},
+ {name:"Глава 3. Хозяйство",tasks:[["Репутация 20",s=>s.rep>=20],
+  ["Три грядки в огороде",s=>s.plots.length>=3],
+  ["Три партии браги",s=>s.brewCount>=3],
+  ["Печь-голландка",s=>s.pech]]},
+ {name:"Глава 4. Своё дело",tasks:[["Репутация 40",s=>s.rep>=40],
+  ["Аппарат II ступени",s=>s.app>=2],
+  ["Знак качества",s=>s.mark],
+  ["Второй этаж",s=>s.floor2]]},
+ {name:"Глава 5. Хозяин деревни",tasks:[["Репутация 60",s=>s.rep>=60],
+  ["Аппарат III ступени",s=>s.app>=3],
+  ["Лицензия",s=>s.license]]}];
+const DEV=[["money","Деньги"],["rep","Репутация"],["fat","Усталость"],["hunger","Голод"],
+ ["houseTemp","Тепло дома"],["boards","Доски"],["nails","Гвозди"],["firewood","Дрова"],
+ ["food","Провизия"],["kit","Ремкомплекты"],["day","День"],["chapter","Глава"],
  ["sugar","Сахар, кг"],["beet","Свёкла, кг"],["potato","Картофель, кг"],["mash","Брага, л"],
  ["mashQ","Кач. браги"],["spirit","Самогон, л"],["quality","Кач. спирта"],["bottles","Бутылок"],
- ["yeast","Дрожжи"],["fert","Удобрения"],["skillPts","Очки навыка"]];
+ ["yeast","Дрожжи"],["fert","Удобрения"],["skillPts","Очки навыка"],
+ ["houseLvl","Дом, уровень"],["barnLvl","Сарай, уровень"]];
 const DEVT=[["daySec","Длина дня, сек"],["ferment","Брожение, дней"],["event","Шанс события, %"],
  ["loan","Возврат займа, дней"],["growBeet","Рост свёклы"],["growPotato","Рост картофеля"],
  ["dieBeet","Свёкла без полива"],["diePotato","Картофель без полива"]];
+const FLAGS=["auto","floor2","mark","license","pech","appFixed","prologue"];
 
 let S=null,timer=null,distill=null,distLoop=null,cur="intro",headerDirty=true;
 
@@ -87,16 +120,25 @@ function load(){let d=null;try{d=JSON.parse(localStorage.getItem(KEY))}catch(e){
 function log(t){const el=document.getElementById("log");
  el.textContent="День "+S.day+": "+t+"\n"+el.textContent}
 function has(k){return S.skills.indexOf(k)>=0}
+function houseL(){return BUILDINGS.house.levels[S.houseLvl]}
+function barnL(){return BUILDINGS.barn.levels[S.barnLvl]}
+function maxPlots(){return barnL().maxPlots}
+function maxVats(){return barnL().maxVats}
+function maxApp(){return barnL().maxApp}
 function vatCap(){return 50+(S.tools.vat||0)*50}
-function plotsN(){return 3+(S.rep>=20?6:0)}
 function sugarCap(){return S.floor2?200:50}
+function seasonIdx(){return (2+Math.floor((S.day-1)/15))%4}
+function season(){return SEASONS[seasonIdx()]}
+function weather(){return WEATHERS[S.weatherIdx]||WEATHERS[0]}
+function outTemp(){return season().outTemp+weather().tempMod}
+function growStep(){return outTemp()>=5?1:0.5}
 function setTimer(){clearInterval(timer);timer=setInterval(tick,Math.max(500,S.timers.daySec*1000))}
 function pauseGame(){S.paused=!S.paused;
  document.getElementById("b-pause").textContent=S.paused?"▶ Пуск":"⏸ Пауза"}
 function restart(){if(!confirm("Начать заново? Прогресс сбросится."))return;
  localStorage.removeItem(KEY);S=JSON.parse(JSON.stringify(DEF));cur="intro";save();render()}
 function show(t){cur=t;render()}
-function accept(){cur="Огород";save();render()}
+function headerFlash(){headerDirty=true}
 
 // ---------- визуальные помощники ----------
 function pic(src,icon,size){return '<img src="'+src+'" alt="'+icon+'" width="'+size+
@@ -105,25 +147,44 @@ function pbar(cls,val,bg){return '<div class="pbar"><i class="'+cls+'" style="'+
  (bg?"background:"+bg+";":"")+"width:"+Math.max(0,Math.min(100,val))+'%"></i></div>'}
 function heatColor(v){return v>=70?"#e57373":v>=40?"#ffd54f":"#81c784"}
 function fatColor(v){return v>=80?"#e57373":v>=50?"#ffd54f":"#81c784"}
+function hungerColor(v){return v>=80?"#e57373":v>=50?"#ffd54f":"#81c784"}
+function warmColor(v){return v>=18?"#81c784":v>=8?"#ffd54f":"#e57373"}
 function qBadge(q){const c=q>=70?"#2e7d32":q>=45?"#f9a825":"#c62828";
  return '<span class="badge" style="background:'+c+'">качество '+q+'</span>'}
 function nextUnlock(){for(const u of UNLOCK)if(S.rep<u[0])return u;return[100,"Всё открыто!"]}
-function headerFlash(){headerDirty=true}
 function zone(){return has("master1")?[35,65]:[40,60]}
-function shopRep(sh){return sh.rep===40&&has("trade2")?20:sh.rep}
+function buyerRep(b){return b.rep===25&&has("trade2")?20:b.rep}
+function spiritPrice(b){let p=500*b.mult*(1+(S.quality-50)/100);
+ if(has("trade1"))p*=1.10;if(S.mark)p*=1.15;if(has("trade3"))p*=1.15;
+ return Math.round(p)}
+function bragaPrice(b){return Math.round(35*b.mult+(S.mashQ-50)*0.4)}
 
-// ---------- интро ----------
-function introHTML(){return '<div class="card" style="font-family:Georgia,serif">'+
- "<h3>Письмо от нотариуса</h3>"+
- "<p>Согласно завещанию Анны Петровны вам переходит дом в деревне Тыковка, сарай и аппарат «Молния-2».</p>"+
- "<p><i>«Внучек, сахар лежит в чулане. Не жадничай и гони с душой. Бабушка»</i></p>"+
- '<button onclick="accept()">Принять наследство</button></div>'}
+// ---------- пролог ----------
+function introHTML(){
+ if(S.introStep===0)return '<div class="card story"><h3>Ноябрь</h3>'+
+  "<p>Денег почти нет. Работы нормальной нет. Жить особо негде.</p>"+
+  "<p>После смерти бабушки приходит письмо от нотариуса: по завещанию тебе достаются старый деревенский дом на краю Тыковки и покосившийся сарай. Никакого богатства — только прохудившаяся крыша и старый забор.</p>"+
+  "<p>Сосед шепнул: в сарае ещё стоит аппаратура бабушки.</p>"+
+  '<button onclick="lookBarn()">Осмотреть сарай</button></div>';
+ return '<div class="card story"><h3>В сарае</h3>'+
+  "<p>Медь аппарата потемнела, трубы проржавели, часть деталей отсутствует. Но кое-что ещё можно использовать.</p>"+
+  "<p>На старом столе — тетрадь бабушки с рецептами браги. В чулане дома нашлись мешок сахара (20 кг), провизия и охапка дров.</p>"+
+  "<p><i>«Внучек, не жадничай и гони с душой. Бабушка»</i></p>"+
+  '<button onclick="accept()">Принять наследство</button></div>'}
+function lookBarn(){S.prologue=true;S.introStep=1;
+ log("Осмотрел сарай: аппарат неисправен, нужен ремкомплект");
+ log("Нашёл тетрадь бабушки с рецептами");
+ save();render()}
+function accept(){cur="Огород";save();render()}
 
 // ---------- огород ----------
-function addPlot(){if(S.rep<20||S.plots.length>=plotsN()||S.money<50)return;
+function addPlot(){if(S.plots.length>=maxPlots()||S.money<50)return;
  S.money-=50;S.plots.push({crop:null,growth:0,dry:0,fert:false,ready:false,watered:false});
  headerFlash();save();render()}
 function plant(i,c){const p=S.plots[i];if(p.crop)return;
+ if(!season().canPlant){log("❄️ Зимой не сажают — подожди весны");return}
+ const crop=CROPS[c];
+ if(crop.rep&&S.rep<crop.rep){log("🔒 Нужно "+crop.rep+" репутации");return}
  const cost=MATERIALS[c==="beet"?"seeds_beet":"seeds_potato"].price;
  if(S.money<cost)return;
  S.money-=cost;p.crop=c;p.growth=0;p.dry=0;p.ready=false;p.watered=false;
@@ -132,26 +193,29 @@ function plant(i,c){const p=S.plots[i];if(p.crop)return;
 function water(i){S.plots[i].watered=true;save();render()}
 function waterAll(){if(!S.tools.bucket)return;S.plots.forEach(p=>{if(p.crop&&!p.ready)p.watered=true});save();render()}
 function harvest(i){const p=S.plots[i];if(!p.ready)return;const c=CROPS[p.crop];
- const y=c.yield+(p.fert?5:0)+(has("garden1")?2:0)+(has("garden2")?3:0);
+ const y=Math.round(c.yield+(p.fert?5:0)+(has("garden1")?2:0)+(has("garden2")?3:0));
  S[p.crop]=(S[p.crop]||0)+y;S.harvestCount++;
  log("Собрал "+y+" кг: "+c.name.toLowerCase());
  p.crop=null;p.ready=false;p.fert=false;
- headerFlash();checkWiki();checkMiles();save();render()}
+ headerFlash();checkWiki();checkMiles();checkChapter();save();render()}
 
-function viewOgorod(){let h='<div class="card"><b>Грядки: '+S.plots.length+'/'+plotsN()+'</b>'+
-  (S.auto?" · 💧 автополив включён":"")+"</div>";
- if(S.plots.length<plotsN())
-  h+='<button onclick="addPlot()" '+(S.rep>=20&&S.money>=50?"":"disabled")+'>+ Грядка (50 ₽)</button>';
- if(S.plots.length<plotsN()&&S.rep<20)h+='<div class="locked">🔒 Ещё грядки — с репутации 20</div>';
+function viewOgorod(){let h='<div class="card"><b>Грядки: '+S.plots.length+'/'+maxPlots()+'</b>'+
+  " · сарай: "+barnL().title+
+  (S.auto?" · 💧 автополив включён":"")+" · за окном "+outTemp()+"°C"+
+  (outTemp()<5?" (рост замедлен вдвое)":"")+"</div>";
+ if(S.plots.length<maxPlots())
+  h+='<button onclick="addPlot()" '+(S.money>=50?"":"disabled")+'>+ Грядка (50 ₽)</button>';
  S.plots.forEach((p,i)=>{h+='<div class="card">';
-  if(!p.crop){h+="Пустая грядка. "+
-   "<button onclick=\"plant("+i+",'beet')\">"+pic(MATERIALS.seeds_beet.img,"🌱",16)+" Свёкла ("+MATERIALS.seeds_beet.price+" ₽)</button>"+
-   (S.rep>=10?"<button onclick=\"plant("+i+",'potato')\">"+pic(MATERIALS.seeds_potato.img,"🥔",16)+" Картофель ("+MATERIALS.seeds_potato.price+" ₽)</button>"
+  if(!p.crop){const noWinter=!season().canPlant;
+   h+="Пустая грядка. "+
+   "<button onclick=\"plant("+i+",'beet')\" "+(noWinter?"disabled":"")+">"+pic(MATERIALS.seeds_beet.img,"🌱",16)+" Свёкла ("+MATERIALS.seeds_beet.price+" ₽)</button>"+
+   (S.rep>=10?"<button onclick=\"plant("+i+",'potato')\" "+(noWinter?"disabled":"")+">"+pic(MATERIALS.seeds_potato.img,"🥔",16)+" Картофель ("+MATERIALS.seeds_potato.price+" ₽)</button>"
     :'<span class="locked">🔒 Картофель — реп. 10</span>');
+   if(noWinter)h+='<div class="muted">❄️ '+season().desc+'</div>';
   }else{const c=CROPS[p.crop],need=S.timers[p.crop==="beet"?"growBeet":"growPotato"];
    h+=pic(c.img,c.icon,24)+" <b>"+c.name+"</b>"+(p.fert?" 💩":"")+(p.ready?' <span class="ok">— ГОТОВА!</span>':"")+"<br>"+
     pbar("gb",p.growth/need*100)+
-    '<span class="muted">'+p.growth+"/"+need+" дн. · "+
+    '<span class="muted">'+Math.floor(p.growth)+"/"+need+" дн. · "+
     (p.dry>0?'<span class="bad">🥵 без полива '+p.dry+" дн.</span>":"💧 полито")+"</span><br>"+
     (p.ready?'<button onclick="harvest('+i+')">Собрать урожай</button>'
             :'<button onclick="water('+i+')">Полить</button>');}
@@ -162,7 +226,7 @@ function viewOgorod(){let h='<div class="card"><b>Грядки: '+S.plots.length
 
 // ---------- чан и брожение ----------
 function brew(k){const r=RECIPES[k];
- if(S.recipesKnown.indexOf(k)<0){log("🔒 Рецепт не изучен — купи его в магазине");return}
+ if(S.recipesKnown.indexOf(k)<0){log("🔒 Рецепт не изучен: "+r.lock);return}
  if(r.rep&&S.rep<r.rep){log("🔒 Рецепт откроется с "+r.rep+" репутации");return}
  for(const m in r.need)if((S[m]||0)<r.need[m])return;
  if(S.mash+r.out>vatCap()){log("Чан переполнен — нужна ёмкость побольше");return}
@@ -172,11 +236,14 @@ function brew(k){const r=RECIPES[k];
  S.brewing={rec:k,left:left,q:r.quality};
  S.brewCount++;
  log("Поставил брагу: "+r.name);
- headerFlash();checkWiki();checkMiles();save();render()}
+ headerFlash();checkWiki();checkMiles();checkChapter();save();render()}
 function sleep(){if(S.money<10){log("Нет денег даже на сон");return}
- S.money-=10;S.fat=0;log("Выспался!");headerFlash();save();render()}
+ S.money-=10;S.fat=Math.max(0,S.fat-houseL().sleepRecover);
+ log("😴 Выспался (+"+houseL().sleepRecover+" к силам)");
+ headerFlash();save();render()}
 
-function viewChan(){let h='<div class="card">'+pic("img/tools/vat.svg","🛢",20)+' Чан: <b>'+S.mash+'</b> / '+vatCap()+" л</div>"+
+function viewChan(){let h='<div class="card">'+pic("img/tools/vat.svg","🛢",20)+' Чан: <b>'+S.mash+'</b> / '+vatCap()+" л · ёмкостей: "+
+  (S.tools.vat||0)+"/"+maxVats()+" (лимит сарая)</div>"+
   pbar("gw",S.mash/vatCap()*100);
  if(S.brewing){const r=RECIPES[S.brewing.rec];
   h+='<div class="card">🫧 <b>'+r.name+"</b> бродит — осталось "+S.brewing.left+" дн.</div>"+
@@ -184,17 +251,20 @@ function viewChan(){let h='<div class="card">'+pic("img/tools/vat.svg","🛢",20
  else h+='<div class="card"><span class="muted">Чан пуст — поставь брагу</span></div>';
  for(const k in RECIPES){const r=RECIPES[k];
   if(S.recipesKnown.indexOf(k)<0){
-   h+='<div class="card locked">🔒 <b>'+r.name+"</b> — рецепт ещё не изучен. Купи его в магазине.</div>";continue}
+   h+='<div class="card locked">🔒 <b>'+r.name+"</b> — "+r.lock+"</div>";continue}
   const can=Object.keys(r.need).every(m=>(S[m]||0)>=r.need[m]);
   h+='<div class="card">'+pic(r.img,"🫙",20)+" <b>"+r.name+"</b> — "+
    Object.keys(r.need).map(m=>r.need[m]+" "+UNITS[m]).join(", ")+
    " → "+r.out+" л, базовое качество "+r.quality+(r.rep&&S.rep<r.rep?' 🔒 реп. '+r.rep:"")+"<br>"+
    '<button onclick="brew(\''+k+'\')" '+((can&&!S.brewing)?"":"disabled")+">Поставить брагу</button></div>"}
- h+='<button onclick="sleep()">😴 Спать (10 ₽)</button>';
+ h+='<button onclick="sleep()">😴 Спать (10 ₽, восстановит '+houseL().sleepRecover+')</button>';
  return h}
 
 // ---------- перегонка ----------
-function startDistill(){if(S.mash<1)return;
+function fixApp(){if(S.kit<1||S.appFixed)return;S.kit--;S.appFixed=true;
+ log("🔧 Аппарат «Молния-2» восстановлен!");headerFlash();save();render()}
+function startDistill(){if(!S.appFixed){log("🔧 Аппарат неисправен — нужен ремкомплект");return}
+ if(S.mash<1)return;
  distill={pos:0,dir:1,hits:0,misses:0};
  distLoop=setInterval(moveNeedle,50);render()}
 function cancelDistill(){clearInterval(distLoop);distill=null;render()}
@@ -219,9 +289,13 @@ function finishDistill(ok){clearInterval(distLoop);distill=null;
  S.distCount++;S.distilled[S.lastMashRec||"sugar"]=true;
  log(ok?"Отсечка пройдена! Получил "+y+" л, качество "+S.quality
        :"Перегар! Сивуха: качество "+S.quality);
- headerFlash();checkWiki();checkMiles();save();render()}
+ headerFlash();checkWiki();checkMiles();checkChapter();save();render()}
 function distHTML(){
  const z=zone(),ap=pic("img/upgrades/app"+S.app+".svg","⚗",64);
+ if(!S.appFixed)return '<div class="card">'+ap+"<b>🔧 Аппарат неисправен</b><br>"+
+  '<span class="muted">Медь потемнела, трубы проржавели, части нет. Пока доступна только продажа браги соседу Михалычу.</span><br>'+
+  '<button onclick="fixApp()" '+(S.kit>0?"":"disabled")+'>Починить аппарат (ремкомплект)</button> '+
+  '<span class="muted">Ремкомплект — в магазине (900 ₽)</span></div>';
  if(!distill)return '<div class="card">'+ap+" Аппарат «Молния-"+S.app+"» · Брага: <b>"+S.mash+"</b> л. "+
   qBadge(S.mashQ)+
   '<br><button onclick="startDistill()" '+(S.mash>=1?"":"disabled")+">Начать перегонку</button></div>";
@@ -233,73 +307,154 @@ function distHTML(){
   '<button onclick="stopNeedle()">Стоп!</button> <button onclick="cancelDistill()">Отмена</button></div>'}
 
 // ---------- продажа ----------
-function price(ch){let p=ch.base*(1+(S.quality-50)/100);
- if(has("trade1"))p*=1.10;if(S.mark)p*=1.15;if(has("trade3"))p*=1.15;return Math.round(p)}
-function sell(i){const sh=SHOPS[i],rep=shopRep(sh);if(S.rep<rep)return;
+function sell(i){const b=BUYERS[i],rep=buyerRep(b);if(S.rep<rep)return;
+ if(b.minQ>0&&S.quality<b.minQ){log("Качество ниже "+b.minQ+" — не возьмёт");return}
  const l=Math.min(S.spirit,S.bottles);
  if(l<1){log(S.bottles<1?"Нет бутылок — купи в магазине":"Нечего продавать");return}
- const money=l*price(sh);
+ const money=l*spiritPrice(b);
  S.money+=money;S.spirit-=l;S.bottles-=l;S.rep+=Math.round(l/2);
- if(!S.license&&sh.name!=="Кореш")S.heat=Math.min(100,S.heat+sh.heat*l);
- log("Продал "+l+" л в «"+sh.name+"» за "+money+" ₽");
- if(S.heat>=100){S.heat=0;const lost=Math.ceil(S.spirit/2);S.spirit-=lost;
-  S.money=Math.max(0,S.money-1000);log("🔥 ОБЛАВА! Забрали "+lost+" л и 1000 ₽")}
- headerFlash();checkMiles();save();render()}
-function viewSell(){let h='<div class="card">🍾 Самогон: <b>'+S.spirit+"</b> л · "+
+ if(!S.license)S.heat=Math.min(100,S.heat+Math.round(b.heat*l*weather().heatMult));
+ log("Продал "+l+" л «"+b.name+"» за "+money+" ₽");
+ headerFlash();checkMiles();checkChapter();save();render()}
+function sellBraga(i){const b=BUYERS[i];if(!b.buysBraga||S.rep<buyerRep(b))return;
+ if(S.mash<1){log("Браги нет");return}
+ const money=S.mash*bragaPrice(b);
+ S.money+=money;S.rep+=Math.max(1,Math.round(S.mash/4));
+ log("Продал "+S.mash+" л браги «"+b.name+"» за "+money+" ₽");
+ S.soldMash+=S.mash;S.mash=0;
+ headerFlash();checkMiles();checkChapter();save();render()}
+function viewSell(){const w=weather();
+ let h='<div class="card">🍾 Самогон: <b>'+S.spirit+"</b> л · "+
   qBadge(S.quality)+" · Бутылок: "+S.bottles+"</div>";
+ h+='<div class="card">🫧 Брага: <b>'+S.mash+"</b> л (качество "+S.mashQ+")</div>";
+ h+='<div class="card">'+w.icon+" Погода: "+w.name+" — при непогоде участковый глядит в оба глаза слабее</div>";
  h+='<div class="card">🔥 Жара: '+S.heat+"%</div>"+pbar("",S.heat,heatColor(S.heat));
- if(S.heat>=70)h+='<div class="card bad">🔥 Жара '+S.heat+"% — на рынке опасно!</div>";
- SHOPS.forEach((sh,i)=>{const rep=shopRep(sh),lock=S.rep<rep;
-  h+='<div class="card"><b>'+sh.icon+" "+sh.name+"</b> — "+price(sh)+" ₽/л"+
-   (lock?" 🔒 реп. "+rep:"")+"<br>"+
-   '<button onclick="sell('+i+')" '+((!lock&&S.spirit>=1)?"":"disabled")+">Продать всё</button></div>"});
+ if(S.heat>=70)h+='<div class="card bad">🔥 Жара '+S.heat+"% — продажа на рынке опасна!</div>";
+ Object.keys(BUYERS).forEach((k,i)=>{const b=BUYERS[k],rep=buyerRep(b),lock=S.rep<rep;
+  h+='<div class="card"><b>'+b.icon+" "+b.name+"</b> — "+spiritPrice(b)+" ₽/л"+
+   (lock?" 🔒 реп. "+rep:"")+
+   (b.minQ>0&&!lock?" · качество от "+b.minQ:"")+"<br>"+
+   '<span class="muted">'+b.desc+"</span><br>";
+  if(!lock){
+   h+='<button onclick="sell('+i+')" '+((S.spirit>=1&&(b.minQ===0||S.quality>=b.minQ))?"":"disabled")+">Продать самогон</button>";
+   if(b.buysBraga)h+='<button onclick="sellBraga('+i+')" '+(S.mash>=1?"":"disabled")+">Продать брагу ("+bragaPrice(b)+" ₽/л)</button>";
+  }
+  h+="</div>"});
+ return h}
+
+// ---------- дом: постройки, выживание ----------
+function upgradeBuilding(id){const B=BUILDINGS[id],curL=id==="house"?S.houseLvl:S.barnLvl;
+ if(curL>=2)return;
+ const nx=B.levels[curL+1];
+ if(S.money<(nx.money||0)||S.boards<(nx.boards||0)||S.nails<(nx.nails||0))return;
+ S.money-=nx.money||0;S.boards-=nx.boards||0;S.nails-=nx.nails||0;
+ if(id==="house")S.houseLvl++;
+ else{S.barnLvl++;
+  if(S.barnLvl===1){
+   if(S.recipesKnown.indexOf("beet")<0){S.recipesKnown.push("beet");
+    log("📜 В сундуке бабушки найдена пометка на полях тетради: изучен рецепт «Свекольная старинная»")}
+   S.skillPts++;log("🎁 Сундук бабушки открыт: +1 очко навыка")}}
+ log("🏗 "+B.name+" → "+nx.title);
+ headerFlash();checkChapter();checkWiki();save();render()}
+function eat(){if(S.food<1){log("Провизии нет — купи в магазине");return}
+ if(S.hunger<=0){log("Я не голоден");return}
+ S.food--;S.hunger=Math.max(0,S.hunger-40);log("Поел — голод отступил");headerFlash();save();render()}
+function cookPotato(){if(S.potato<2){log("Нужно 2 кг картофеля");return}
+ S.potato-=2;S.hunger=Math.max(0,S.hunger-50);log("Сварил картофель — сыт");headerFlash();save();render()}
+function fire(){if(S.firewood<1){log("Дрова кончились");return}
+ S.firewood--;S.houseTemp+=12;log("🔥 Топлю печь — в доме теплеет");headerFlash();save();render()}
+function viewHouse(){const out=outTemp(),w=weather(),hl=houseL();
+ let h='<div class="card story"><b>'+pic("img/upgrades/floor2.svg","🏠",20)+" "+BUILDINGS.house.name+
+  ': '+hl.title+'</b><br><span class="muted">'+hl.desc+'</span><br>'+
+  'Сон восстанавливает '+hl.sleepRecover+' усталости · остывает на '+hl.heatLoss+'°/день</div>';
+ if(S.houseLvl<2){const nx=BUILDINGS.house.levels[S.houseLvl+1];
+  const can=S.money>=(nx.money||0)&&S.boards>=(nx.boards||0)&&S.nails>=(nx.nails||0);
+  h+='<div class="card"><b>Следующий уровень: '+nx.title+'</b> — '+nx.money+" ₽ + "+
+   (nx.boards||0)+" досок + "+(nx.nails||0)+" гвоздей<br>"+
+   '<span class="muted">'+nx.desc+'</span><br>'+
+   '<button onclick="upgradeBuilding(\'house\')" '+(can?"":"disabled")+'>Улучшить дом</button></div>'}
+ let bh='<div class="card"><b>'+pic("img/upgrades/app2.svg","🏚",20)+" "+BUILDINGS.barn.name+
+  ': '+barnL().title+'</b><br><span class="muted">'+barnL().desc+'</span><br>'+
+  'Грядок до '+barnL().maxPlots+' · чанов до '+barnL().maxVats+' · аппарат до ст. '+barnL().maxApp+'</div>';
+ if(S.barnLvl<2){const nx=BUILDINGS.barn.levels[S.barnLvl+1];
+  const can=S.money>=(nx.money||0)&&S.boards>=(nx.boards||0)&&S.nails>=(nx.nails||0);
+  bh+='<div class="card"><b>Следующий уровень: '+nx.title+'</b> — '+nx.money+" ₽ + "+
+   (nx.boards||0)+" досок + "+(nx.nails||0)+" гвоздей<br>"+
+   '<span class="muted">'+nx.desc+'</span><br>'+
+   '<button onclick="upgradeBuilding(\'barn\')" '+(can?"":"disabled")+'>Улучшить сарай</button></div>'}
+ h+=bh;
+ h+='<div class="card">🌡 В доме: <b>'+Math.round(S.houseTemp)+"°C</b> · за окном: "+out+"°C ("+
+  season().icon+" "+season().name+", "+w.icon+" "+w.name+")</div>"+
+  pbar("",Math.max(0,Math.min(100,(S.houseTemp+20)*2.5)),warmColor(S.houseTemp));
+ if(S.houseTemp<8)h+='<div class="card bad">❄️ В доме холодно: брага может скиснуть, а голод растёт быстрее. Топи печь!</div>';
+ if(!S.appFixed)h+='<div class="card warn">🔧 Аппарат всё ещё не починен — ремкомплект в магазине</div>';
+ h+='<div class="card">🍲 Провизия: '+S.food+" · 🪵 Дрова: "+S.firewood+" · 🥔 Картофель: "+S.potato+" кг</div>";
+ h+='<button onclick="eat()" '+(S.food>0?"":"disabled")+'>🍲 Поесть (-40 голода)</button> '+
+  '<button onclick="cookPotato()" '+(S.potato>=2?"":"disabled")+'>🥔 Сварить картофель (2 кг)</button> '+
+  '<button onclick="fire()" '+(S.firewood>0?"":"disabled")+'>🪵 Топить печь (+12°C)</button>';
+ if(S.pech)h+='<div class="card ok">🔥 Печь-голландка установлена — сама греет дом</div>';
  return h}
 
 // ---------- магазин ----------
 function buyM(k){const m=MATERIALS[k];if(S.money<m.price)return;
  if(k==="sugar"){if(S.sugar+10>sugarCap()){log("Склад переполнен");return}S.sugar+=10}
+ else if(k==="food")S.food++;
+ else if(k==="firewood")S.firewood++;
+ else if(k==="boards")S.boards++;
+ else if(k==="nails")S.nails++;
+ else if(k==="kit")S.kit++;
  else if(k==="yeast")S.yeast++;
  else if(k==="fertilizer")S.fert++;
  else if(k==="bottles")S.bottles++;
  else return;
  S.money-=m.price;headerFlash();save();render()}
-function buyTool(k){const t=TOOLS[k];const n=S.tools[k]||0;
- if(k==="vat"&&n>=(t.max||99))return;
+function buyTool(k){const t=TOOLS[k];
+ if(k==="vat"&&(S.tools.vat||0)>=maxVats()){log("Сарай не вместит больше чанов");return}
  if(S.money<t.price)return;
- S.money-=t.price;S.tools[k]=n+1;
+ S.money-=t.price;S.tools[k]=(S.tools[k]||0)+1;
  if(k==="crate")S.bottles+=5;
  log("Куплено: "+t.icon+" "+t.name);
  headerFlash();checkWiki();checkMiles();save();render()}
 function buyUp(k){const u=UPGRADES[k];
  if(S.rep<u.rep){log("🔒 Нужно "+u.rep+" репутации");return}
  if(S.money<u.price){log("Не хватает денег");return}
- if(k==="app2"){if(S.app>=2)return;S.app=2}
- else if(k==="app3"){if(S.app<2)return;S.app=3}
+ if(k==="app2"){if(S.app>=2)return;
+  if(S.barnLvl<1){log("🏚 Сарай уровня 1 нужен под аппарат II");return}S.app=2}
+ else if(k==="app3"){if(S.app<2||S.app>=3)return;
+  if(S.barnLvl<2){log("🏚 Сарай уровня 2 нужен под колонну");return}S.app=3}
+ else if(k==="pech"){if(S.pech)return;S.pech=true}
  else{if(S[k])return;S[k]=true}
  S.money-=u.price;log("Куплено: "+u.icon+" "+u.name);
- headerFlash();checkWiki();checkMiles();save();render()}
+ headerFlash();checkChapter();checkWiki();checkMiles();save();render()}
 function buyRecipe(k){const r=RECIPES[k];
  if(S.recipesKnown.indexOf(k)>=0)return;
+ if(r.price<=0){log("Этот рецепт нельзя купить: "+r.lock);return}
  if(r.rep&&S.rep<r.rep){log("🔒 Нужно "+r.rep+" репутации");return}
  if(S.money<r.price)return;
  S.money-=r.price;S.recipesKnown.push(k);
  log("📜 Изучен рецепт: "+r.name);headerFlash();save();render()}
-function viewShop(){let h='<div class="card"><b>Материалы</b></div>';
+function viewShop(){let h='<div class="card"><b>Хозяйство</b></div>';
+ ["food","firewood","boards","nails","kit"].forEach(k=>{const m=MATERIALS[k];
+  h+='<div class="card">'+m.icon+" <b>"+m.name+"</b> — "+m.price+" ₽. "+
+   '<span class="muted">'+m.desc+"</span><br>"+
+   '<button onclick="buyM(\''+k+'\')">Купить</button></div>'});
+ h+='<div class="card"><b>Материалы для браги</b></div>';
  ["sugar","yeast","fertilizer","bottles"].forEach(k=>{const m=MATERIALS[k];
   h+='<div class="card">'+pic(m.img,m.icon,20)+" <b>"+m.name+"</b> — "+m.price+" ₽. "+
    '<span class="muted">'+m.desc+"</span><br>"+
    '<button onclick="buyM(\''+k+'\')">Купить</button></div>'});
  h+='<div class="card"><b>Инструменты</b></div>';
- for(const k in TOOLS){const t=TOOLS[k],n=S.tools[k]||0,dis=(k==="vat"&&n>=t.max);
+ for(const k in TOOLS){const t=TOOLS[k],n=S.tools[k]||0,
+  dis=(k==="vat"&&n>=maxVats());
   h+='<div class="card">'+pic(t.img,t.icon,20)+" <b>"+t.name+"</b>"+(n?" ×"+n:"")+" — "+t.price+" ₽. "+
    '<span class="muted">'+t.desc+"</span><br>"+
    '<button onclick="buyTool(\''+k+'\')" '+(dis?"disabled":"")+">Купить</button></div>"}
  h+='<div class="card"><b>Улучшения</b></div>';
- const map={autopoliv:"auto",floor2:"floor2",mark:"mark",license:"license"};
+ const map={autopoliv:"auto",floor2:"floor2",mark:"mark",license:"license",pech:"pech"};
  for(const k in UPGRADES){const u=UPGRADES[k];
   const owned=(k==="app2"&&S.app>=2)||(k==="app3"&&S.app>=3)||(map[k]&&S[map[k]]);
   const lock=S.rep<u.rep;
-  h+='<div class="card">'+pic(u.img,u.icon,20)+" <b>"+u.name+"</b> — "+u.price+" ₽"+
+  h+='<div class="card">'+(u.img?pic(u.img,u.icon,20):u.icon)+" <b>"+u.name+"</b> — "+u.price+" ₽"+
    (u.rep?" (реп. "+u.rep+")":"")+(owned?' <span class="ok">✔</span>':"")+"<br>"+
    '<span class="muted">'+u.desc+"</span><br>"+
    '<button onclick="buyUp(\''+k+'\')" '+((owned||lock)?"disabled":"")+">"+
@@ -309,23 +464,23 @@ function viewShop(){let h='<div class="card"><b>Материалы</b></div>';
   if(S.recipesKnown.indexOf(k)>=0)continue;
   h+='<div class="card">'+pic(r.img,"📜",20)+" <b>"+r.name+"</b> — "+r.price+" ₽"+
    (r.rep?" (реп. "+r.rep+")":"")+"<br>"+
-   '<span class="muted">'+r.wiki+"</span><br>"+
+   '<span class="muted">'+r.lock+"</span><br>"+
    '<button onclick="buyRecipe(\''+k+'\')" '+
-   ((S.money>=r.price&&(!r.rep||S.rep>=r.rep))?"":"disabled")+">Купить рецепт</button></div>"}
+   ((r.price>0&&S.money>=r.price&&(!r.rep||S.rep>=r.rep))?"":"disabled")+">Купить рецепт</button></div>"}
  return h}
 
 // ---------- развитие ----------
 function learnSkill(k){const s=SKILLS[k];
  if(has(k))return;
  if(s.req&&!has(s.req))return;
- if(S.skillPts<1){log("Нет очков навыка — открывай Wiki и расти в репутации");return}
+ if(S.skillPts<1){log("Нет очков навыка — открывай записи тетради и расти в репутации");return}
  S.skills.push(k);S.skillPts--;
  log("🌰 Изучено: "+s.name);headerFlash();save();render()}
 function viewSkills(){
  const branches={};
  for(const k in SKILLS){const s=SKILLS[k];(branches[s.branch]=branches[s.branch]||[]).push(k)}
  let h='<div class="card">🌰 Очки навыка: <b>'+S.skillPts+'</b> · изучено: '+S.skills.length+"/"+Object.keys(SKILLS).length+
-  ' · очки дают Wiki и вехи репутации</div>';
+  ' · очки дают тетрадь и вехи репутации</div>';
  for(const b in branches){
   h+='<div class="card"><b>'+b+"</b></div>";
   branches[b].forEach(k=>{const s=SKILLS[k],own=has(k),lock=s.req&&!has(s.req);
@@ -336,7 +491,7 @@ function viewSkills(){
     "</div>"})}
  return h}
 
-// ---------- вики ----------
+// ---------- тетрадь: главы + записи ----------
 function unlockMet(k){const u=WIKI[k].unlock;
  switch(u.type){
   case "brew":return S.brewCount>0;
@@ -350,13 +505,29 @@ function unlockMet(k){const u=WIKI[k].unlock;
 function checkWiki(){WIKI_ORDER.forEach(k=>{
  if(S.wiki.indexOf(k)<0&&unlockMet(k)){
   S.wiki.push(k);S.skillPts++;
-  log("📖 Открыта страница Wiki: «"+WIKI[k].title+"» — +1 очко навыка")}})}
-function viewWiki(){
- let h='<div class="card">📖 Вики винокура: открыто '+S.wiki.length+"/"+WIKI_ORDER.length+
-  ' · каждая страница даёт очко навыка</div>';
+  log("📖 Открыта запись тетради: «"+WIKI[k].title+"» — +1 очко навыка")}})}
+function checkMiles(){MILES.forEach(m=>{
+ if(S.rep>=m&&S.milestones.indexOf(m)<0){S.milestones.push(m);S.skillPts++;
+  log("🏅 Веха репутации "+m+" — +1 очко навыка")}})}
+function checkChapter(){
+ if(S.chapter===1&&S.soldMash>0){S.chapter=2;
+  log("📖 Глава 2 «Первые деньги»: почини аппарат и сарай — перегонка ждёт")}
+ else if(S.chapter===2&&S.appFixed&&S.barnLvl>=1&&S.distCount>0){S.chapter=3;
+  log("📖 Глава 3 «Хозяйство»: ставь огород на поток")}
+ else if(S.chapter===3&&S.rep>=20&&S.plots.length>=3){S.chapter=4;
+  log("📖 Глава 4 «Своё дело»: репутация и оборудование")}
+ else if(S.chapter===4&&S.rep>=40&&S.app>=2){S.chapter=5;
+  log("📖 Глава 5 «Хозяин деревни»: масштабируйся")}}
+function viewNotebook(){
+ const ch=CHAPTERS[S.chapter-1];
+ let h='<div class="card story"><b>📖 '+ch.name+'</b></div><div class="card">';
+ h+=ch.tasks.map(t=>'<div class="'+(t[1](S)?"done":"todo")+'">'+(t[1](S)?"✔":"☐")+" "+t[0]+"</div>").join("");
+ h+="</div>";
+ h+='<div class="card">📖 Записи тетради: открыто '+S.wiki.length+"/"+WIKI_ORDER.length+
+  ' · каждая запись даёт очко навыка</div>';
  WIKI_ORDER.forEach(k=>{const w=WIKI[k];
   if(S.wiki.indexOf(k)>=0){
-   h+='<div class="card"><b>'+w.icon+" "+w.title+'</b><br>'+pic(w.img,w.icon,56)+
+   h+='<div class="card"><b>'+w.icon+" "+w.title+"</b><br>"+pic(w.img,w.icon,56)+
     '<div class="wtext">'+w.text+"</div></div>"}
   else h+='<div class="card locked">🔒 ??? <span class="muted">Подсказка: '+w.hint+"</span></div>"});
  return h}
@@ -366,48 +537,49 @@ function viewProgress(){const nx=nextUnlock();
  return '<div class="card">⭐ Репутация: <b>'+S.rep+"</b> · до «"+nx[1]+"» осталось "+
   Math.max(0,nx[0]-S.rep)+"</div>"+
   pbar("gb",nx[0]>=100?100:S.rep/Math.max(1,nx[0])*100)+
+  '<div class="card">📖 Глава: <b>'+CHAPTERS[S.chapter-1].name+"</b></div>"+
   "<table>"+UNLOCK.map(u=>"<tr><td>"+(S.rep>=u[0]?"⭐":"🔒")+" "+u[0]+"</td><td>"+u[1]+"</td></tr>").join("")+"</table>"}
 function devHTML(){let h='<div class="card"><b>Ресурсы и состояние</b><br>'+
  DEV.map(d=>d[1]+': <input id="dv_'+d[0]+'" value="'+S[d[0]]+'" style="width:70px">').join("<br>")+"</div>";
  h+='<div class="card"><b>Флаги</b><br>'+
-  ["auto","floor2","mark","license"].map(k=>
-   '<label><input type="checkbox" id="dv_'+k+'" '+(S[k]?"checked":"")+"> "+k+"</label>").join("<br>")+"</div>";
- h+='<div class="card"><b>Таймеры и события</b><br>'+
+ FLAGS.map(k=>'<label><input type="checkbox" id="dv_'+k+'" '+(S[k]?"checked":"")+"> "+k+"</label>").join("<br>")+"</div>";
+ h+='<div class="card"><b>Таймеры</b><br>'+
  DEVT.map(d=>d[1]+': <input id="dv_'+d[0]+'" value="'+S.timers[d[0]]+'" style="width:60px">').join("<br>")+"</div>";
  h+='<button onclick="devApply()">Применить</button> <button onclick="devDay()">+1 день</button> '+
-  '<button onclick="devOpenWiki()">Открыть всю Wiki</button> '+
+  '<button onclick="doEvent()">Событие сейчас</button> '+
+  '<button onclick="devOpenWiki()">Открыть всю тетрадь</button> '+
   '<button onclick="devSkill()">+1 очко навыка</button> '+
   '<button onclick="restart()">Сброс игры</button>';
  return h}
 function devApply(){
  DEV.forEach(d=>{const v=parseFloat(document.getElementById("dv_"+d[0]).value);
   if(!isNaN(v))S[d[0]]=v});
- ["auto","floor2","mark","license"].forEach(k=>{S[k]=document.getElementById("dv_"+k).checked});
+ FLAGS.forEach(k=>{S[k]=document.getElementById("dv_"+k).checked});
  DEVT.forEach(d=>{const v=parseFloat(document.getElementById("dv_"+d[0]).value);
   if(!isNaN(v))S.timers[d[0]]=v});
- setTimer();headerFlash();checkMiles();save();render()}
+ setTimer();headerFlash();checkChapter();checkMiles();save();render()}
 function devOpenWiki(){let n=0;
  WIKI_ORDER.forEach(k=>{if(S.wiki.indexOf(k)<0){S.wiki.push(k);n++}});
- if(n){S.skillPts+=n;log("Dev: открыл все страницы Wiki (+"+n+" очков)")}
+ if(n){S.skillPts+=n;log("Dev: открыл все записи тетради (+"+n+" очков)")}
  headerFlash();save();render()}
 function devSkill(){S.skillPts++;log("Dev: +1 очко навыка");headerFlash();save();render()}
 function devDay(){tick()}
 
-// ---------- день и события ----------
-function event(){const r=Math.random();
- if(r<0.25){S.money+=300;log("Тётя Клава прислала 300 ₽ на обустройство")}
- else if(r<0.5&&S.rep>=10){S.loans.push({who:"Сосед",amount:300,ret:S.timers.loan});
-  log("Сосед занял 300 ₽ под честное слово")}
- else if(r<0.5){S.money+=150;log("Продал бабушкино варенье за 150 ₽")}
- else if(r<0.7){S.heat=Math.min(100,S.heat+10);log("В деревне появился участковый — жара +10")}
- else if(r<0.85){S.fat=Math.min(100,S.fat+15);log("Косили сено у соседа — усталость +15")}
- else{S.money=Math.max(0,S.money-200);log("Сгорел сарай (не весь) — ремонт 200 ₽")}
- headerFlash()}
+// ---------- события и день ----------
+function doEvent(){const pool=EVENTS.filter(e=>e.cond(S));
+ if(!pool.length){log("Тихий день, ничего не случилось");return}
+ const e=pool[Math.floor(Math.random()*pool.length)];
+ log("⚡ "+e.title+": "+e.run(S));headerFlash()}
 function tick(){if(S.paused||cur==="intro")return;
  S.day++;
+ if(S.weatherLeft>0)S.weatherLeft--;
+ else{S.weatherIdx=Math.floor(Math.random()*WEATHERS.length);
+  S.weatherLeft=2+Math.floor(Math.random()*3);
+  log("🌤 Погода сменилась: "+weather().name.toLowerCase())}
+ const w=weather(),out=outTemp();
  S.plots.forEach(p=>{if(!p.crop)return;
   const gk=p.crop==="beet"?"growBeet":"growPotato",dk=p.crop==="beet"?"dieBeet":"diePotato";
-  if(S.auto||p.watered){p.growth++;p.dry=0}else p.dry++;
+  if(S.auto||p.watered||w.rain){p.growth+=growStep();p.dry=0}else p.dry++;
   p.watered=false;
   if(p.growth>=S.timers[gk]&&!p.ready){p.ready=true;log("Урожай «"+CROPS[p.crop].name+"» созрел")}
   else if(p.growth<S.timers[gk]&&p.dry>=S.timers[dk]+(has("garden2")?1:0)){
@@ -416,28 +588,42 @@ function tick(){if(S.paused||cur==="intro")return;
  if(S.brewing){S.brewing.left--;
   if(S.brewing.left<=0){S.lastMashRec=S.brewing.rec;
    S.mash+=RECIPES[S.brewing.rec].out;S.mashQ=S.brewing.q;
-   S.brewing=null;log("🫧 Брага созрела — можно гнать")}}
+   S.brewing=null;log("🫧 Брага созрела — можно гнать или продать соседу")}}
+ S.houseTemp+=(out-S.houseTemp)*(houseL().heatLoss/24);
+ if(S.pech&&S.firewood>0&&S.houseTemp<18){S.firewood--;S.houseTemp+=12}
+ if(S.houseTemp<5&&S.brewing&&Math.random()<0.35){S.brewing=null;
+  log("❄️ В доме холодно — брага замёрзла и скисла")}
+ S.hunger=Math.min(100,S.hunger+10+(S.houseTemp<10?5:0));
+ if(S.hunger>=100){S.hunger=60;S.fat=Math.min(100,S.fat+20);
+  log("🍖 Голодный день — сил нет ни на что")}
+ S.fat=Math.min(100,S.fat+(has("garden3")?5:8));
+ if(S.fat>=100){S.fat=60;log("Свалился с ног — проспал день")}
  S.money-=20;
  if(S.money<0){S.money=0;log("Денег нет — живём в долг")}
- S.fat=Math.min(100,S.fat+(has("garden3")?5:8));S.heat=Math.max(0,S.heat-3);
- if(S.fat>=100){S.fat=60;log("Свалился с ног — проспал день")}
+ S.heat=Math.max(0,S.heat-3);
  S.loans=S.loans.filter(l=>{l.ret--;
   if(l.ret<=0){const back=Math.round(l.amount*1.5);S.money+=back;S.rep+=5;
    log(l.who+" вернул долг: +"+back+" ₽");return false}return true});
- if(Math.random()*100<S.timers.event)event();
- checkWiki();checkMiles();headerFlash();save();render()}
+ if(Math.random()*100<S.timers.event)doEvent();
+ checkWiki();checkMiles();checkChapter();headerFlash();save();render()}
 
 // ---------- рендер ----------
 function render(){
  if(headerDirty){
+  document.getElementById("s-season").textContent=season().icon+" "+season().name;
+  document.getElementById("s-weather").textContent=weather().icon+" "+weather().name;
   document.getElementById("s-money").textContent=S.money+" ₽";
   document.getElementById("s-rep").textContent=S.rep;
-  document.getElementById("s-day").textContent=S.day;
+  document.getElementById("s-day").textContent="День "+S.day;
+  document.getElementById("s-hunger").textContent=S.hunger+"%";
   document.getElementById("s-fat").textContent=S.fat+"%";
+  document.getElementById("s-warm").textContent=Math.round(S.houseTemp)+"°C";
   document.getElementById("s-heat").textContent=S.heat+"%";
-  const mf=document.getElementById("m-fat"),mh=document.getElementById("m-heat");
-  mf.style.width=S.fat+"%";mf.style.background=fatColor(S.fat);
-  mh.style.width=S.heat+"%";mh.style.background=heatColor(S.heat);
+  const setbar=(id,v,col)=>{const m=document.getElementById(id);
+   m.style.width=v+"%";m.style.background=col};
+  setbar("m-hunger",S.hunger,hungerColor(S.hunger));
+  setbar("m-fat",S.fat,fatColor(S.fat));
+  setbar("m-heat",S.heat,heatColor(S.heat));
   headerDirty=false}
  document.getElementById("tabs").innerHTML=TABS.map(t=>
   '<button class="tab'+(cur===t?" on":"")+'" onclick="show(\''+t+'\')">'+t+"</button>").join("");
@@ -447,16 +633,17 @@ function render(){
  else if(cur==="Чан")v.innerHTML=viewChan();
  else if(cur==="Перегонка")v.innerHTML=distHTML();
  else if(cur==="Продажа")v.innerHTML=viewSell();
+ else if(cur==="Дом")v.innerHTML=viewHouse();
  else if(cur==="Магазин")v.innerHTML=viewShop();
  else if(cur==="Развитие")v.innerHTML=viewSkills();
- else if(cur==="Wiki")v.innerHTML=viewWiki();
+ else if(cur==="Тетрадь")v.innerHTML=viewNotebook();
  else if(cur==="Прогресс")v.innerHTML=viewProgress();
  else if(cur==="Dev")v.innerHTML=devHTML()}
 
 // ---------- старт ----------
 load();
-checkWiki();checkMiles();
-if(localStorage.getItem(KEY))cur="Огород";
+if(S.prologue)cur="Огород";
+checkWiki();checkMiles();checkChapter();
 headerDirty=true;render();setTimer();
 document.addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();pauseGame()}});
 </script>
